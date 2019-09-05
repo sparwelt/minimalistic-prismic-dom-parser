@@ -13,7 +13,7 @@ const CHARACTER_ENTITIES = {
  * Read https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
  * to get more information about XSS prevention strategies and techniques.
  *
- * @param {string} html HTML to be escaped
+ * @param {string} html - HTML to be escaped
  * @returns {string} escaped HTML
  */
 export const escapeHtml = html =>

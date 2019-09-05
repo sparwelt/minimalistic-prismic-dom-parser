@@ -15,7 +15,7 @@ import { NODE_TYPES } from './utils/types'
 /**
  * Creates an empty list.
  *
- * @param ordered Determines if the list is ordered
+ * @param ordered - Determines if the list is ordered
  * @returns {{spans: [], text: string, type: (*)}}
  */
 const createEmptyList = (ordered = false) => ({

@@ -4,7 +4,7 @@
  * from
  * https://github.com/prismicio/prismic-helpers/commit/a1439d8fe5fe388abe20bd69eeed26f67631f5c3
  *
- * @param link Prismic link
+ * @param link - Prismic link
  * @returns {string} URL
  */
 export const resolveUrl = link =>

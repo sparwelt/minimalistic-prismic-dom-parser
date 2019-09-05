@@ -5,19 +5,20 @@ export class RichTextParser {
   /**
    * Parse Prismic rich text components into HTML string.
    *
-   * @param richText
-   * @returns {string} HTML string from rich text
+   * @param richText - Prismic rich text component
+   * @param {HtmlSerializer} [htmlSerializer=new HtmlSerializer()] - HtmlSerializer used for parsing
+   * @returns {string} Rich text as HTML string
    */
-  static parseAsHtml(richText) {
-    return HtmlSerializer.serializeNodeTree(new NodeTree(richText)).join('')
+  static parseAsHtml(richText, htmlSerializer = new HtmlSerializer()) {
+    return htmlSerializer.serializeNodeTree(new NodeTree(richText)).join('')
   }
 
   /**
    * Parse Prismic rich text components as plain text.
    *
-   * @param richText
-   * @param {string=} joinString
-   * @returns {string}
+   * @param richText - Prismic rich text component
+   * @param {string} [joinString= ] - String used to join parsed text of components
+   * @returns {string} Rich text as plain text
    */
   static parseAsText(richText, joinString = ' ') {
     return richText.map(block => block.text).join(joinString)

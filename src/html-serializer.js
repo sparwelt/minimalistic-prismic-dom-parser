@@ -9,32 +9,42 @@ import { NODE_TYPES } from './utils/types'
 
 export class HtmlSerializer {
   /**
+   * @param {Object} [options={}] - Options for customizing the serialization
+   * @param {string} [options.imageCopyrightAttribute=data-copyright] - Attribute to assign the image copyright to
+   */
+  constructor({ imageCopyrightAttribute } = {}) {
+    this.imageCopyrightAttribute = imageCopyrightAttribute || 'data-copyright'
+  }
+
+  /**
    * Serialize node tree into array of HTML strings.
    *
    * @param {NodeTree} nodeTree
    * @returns {string[]} serialized node tree
    */
-  static serializeNodeTree(nodeTree) {
-    return nodeTree.children.map(parentNode =>
-      (function step(node) {
-        const serializedChildren = node.children.reduce(
-          (result, node) => result.concat([step(node)]),
-          []
-        )
+  serializeNodeTree(nodeTree) {
+    const step = node => {
+      const serializedChildren = node.children.reduce(
+        (result, node) => result.concat([step(node)]),
+        []
+      )
 
-        return HtmlSerializer.serialize(node, serializedChildren)
-      })(parentNode)
-    )
+      return this.serialize(node, serializedChildren)
+    }
+
+    return nodeTree.children.map(parentNode => {
+      return step(parentNode)
+    })
   }
 
   /**
    * Create <tag> with children inside.
    *
-   * @param {string} tag Outer HTML element tag
-   * @param {string[]} children Children concatenated and used as inner HTML
+   * @param {string} tag - Outer HTML element tag
+   * @param {string[]} children - Children concatenated and used as inner HTML
    * @returns {string} serialized HTML string (Tag with children)
    */
-  static serializeStandardTag(tag, children) {
+  serializeStandardTag(tag, children) {
     return `<${tag}>${children.join('')}</${tag}>`
   }
 
@@ -42,15 +52,15 @@ export class HtmlSerializer {
    * Create <img> wrapped in <p>.
    * Image is additionally wrapped in <a> tag, if linkTo is provided on the element.
    *
-   * @param element Prismic image element
+   * @param element - Prismic image element
    * @returns {string} serialized HTML string (Image)
    */
-  static serializeImage(element) {
+  serializeImage(element) {
     const src = escapeHtml(element.url)
     const alt = escapeHtml(element.alt || '')
     const copyright = escapeHtml(element.copyright || '')
 
-    const img = `<img src="${src}" alt="${alt}" data-copyright="${copyright}">`
+    const img = `<img src="${src}" alt="${alt}" ${this.imageCopyrightAttribute}="${copyright}">`
 
     let content = element.linkTo
       ? HtmlSerializer.serializeHyperlink(element.linkTo, img)
@@ -62,10 +72,10 @@ export class HtmlSerializer {
   /**
    * Create <div> containing Prismic embed HTML.
    *
-   * @param element Prismic embed element
+   * @param element - Prismic embed element
    * @returns {string} serialized HTML string (Div with e.g. iframe inside)
    */
-  static serializeEmbed(element) {
+  serializeEmbed(element) {
     const dataOembed = escapeHtml(element.oembed.embed_url)
     const dataOembedType = escapeHtml(element.oembed.type)
     const dataOembedProvider = escapeHtml(element.oembed.provider_name)
@@ -83,11 +93,11 @@ export class HtmlSerializer {
   /**
    * Create <a> with content inside.
    *
-   * @param link Prismic link with optional target and url
-   * @param {string=} content Content to be used as inner HTML
+   * @param link - Prismic link with optional target and url
+   * @param {string} [content=] - Content to be used as inner HTML
    * @returns {string} serialized HTML string (Link)
    */
-  static serializeHyperlink(link, content = '') {
+  serializeHyperlink(link, content = '') {
     const href = escapeHtml(resolveUrl(link))
     const escapedTarget = escapeHtml(link.target || '')
     const target = escapedTarget
@@ -100,11 +110,11 @@ export class HtmlSerializer {
   /**
    * Create <span> with class provided by element.data.label.
    *
-   * @param element Prismic element with label
-   * @param children Children concatenated and used as inner HTML
+   * @param element - Prismic element with label
+   * @param children - Children concatenated and used as inner HTML
    * @returns {string} serialized HTML string (Span with class)
    */
-  static serializeLabel(element, children) {
+  serializeLabel(element, children) {
     const label = element.data.label
       ? `class="${escapeHtml(element.data.label)}"`
       : ''
@@ -117,63 +127,60 @@ export class HtmlSerializer {
    * @param {string|null} text
    * @returns {string} escaped text
    */
-  static serializeSpan(text) {
+  serializeSpan(text) {
     return escapeHtml(text || '').replace(/\n/g, '<br>')
   }
 
   /**
    * Serialize Prismic node by choosing the appropriate method based on its type.
    *
-   * @param {*} node Prismic node
-   * @param {string[]} children Serialized node children used as inner HTML
+   * @param {*} node - Prismic node
+   * @param {string[]} children - Serialized node children used as inner HTML
    * @returns {string|null} serialized HTML string (Any - based on node type)
    */
-  static serialize(node, children) {
+  serialize(node, children) {
     const { type, element } = node
     const content = node instanceof SpanNode ? node.text : null
 
     switch (type) {
       case NODE_TYPES.heading1.type:
-        return HtmlSerializer.serializeStandardTag('h1', children)
+        return this.serializeStandardTag('h1', children)
       case NODE_TYPES.heading2.type:
-        return HtmlSerializer.serializeStandardTag('h2', children)
+        return this.serializeStandardTag('h2', children)
       case NODE_TYPES.heading3.type:
-        return HtmlSerializer.serializeStandardTag('h3', children)
+        return this.serializeStandardTag('h3', children)
       case NODE_TYPES.heading4.type:
-        return HtmlSerializer.serializeStandardTag('h4', children)
+        return this.serializeStandardTag('h4', children)
       case NODE_TYPES.heading5.type:
-        return HtmlSerializer.serializeStandardTag('h5', children)
+        return this.serializeStandardTag('h5', children)
       case NODE_TYPES.heading6.type:
-        return HtmlSerializer.serializeStandardTag('h6', children)
+        return this.serializeStandardTag('h6', children)
       case NODE_TYPES.paragraph.type:
-        return HtmlSerializer.serializeStandardTag('p', children)
+        return this.serializeStandardTag('p', children)
       case NODE_TYPES.preformatted.type:
-        return HtmlSerializer.serializeStandardTag('pre', children)
+        return this.serializeStandardTag('pre', children)
       case NODE_TYPES.strong.type:
-        return HtmlSerializer.serializeStandardTag('strong', children)
+        return this.serializeStandardTag('strong', children)
       case NODE_TYPES.em.type:
-        return HtmlSerializer.serializeStandardTag('em', children)
+        return this.serializeStandardTag('em', children)
       case NODE_TYPES.listItem.type:
-        return HtmlSerializer.serializeStandardTag('li', children)
+        return this.serializeStandardTag('li', children)
       case NODE_TYPES.oListItem.type:
-        return HtmlSerializer.serializeStandardTag('li', children)
+        return this.serializeStandardTag('li', children)
       case NODE_TYPES.list.type:
-        return HtmlSerializer.serializeStandardTag('ul', children)
+        return this.serializeStandardTag('ul', children)
       case NODE_TYPES.oList.type:
-        return HtmlSerializer.serializeStandardTag('ol', children)
+        return this.serializeStandardTag('ol', children)
       case NODE_TYPES.image.type:
-        return HtmlSerializer.serializeImage(element)
+        return this.serializeImage(element)
       case NODE_TYPES.embed.type:
-        return HtmlSerializer.serializeEmbed(element)
+        return this.serializeEmbed(element)
       case NODE_TYPES.hyperlink.type:
-        return HtmlSerializer.serializeHyperlink(
-          element.data,
-          children.join('')
-        )
+        return this.serializeHyperlink(element.data, children.join(''))
       case NODE_TYPES.label.type:
-        return HtmlSerializer.serializeLabel(element, children)
+        return this.serializeLabel(element, children)
       case NODE_TYPES.span.type:
-        return HtmlSerializer.serializeSpan(content)
+        return this.serializeSpan(content)
       default:
         return null
     }
