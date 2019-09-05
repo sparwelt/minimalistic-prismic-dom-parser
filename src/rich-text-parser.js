@@ -1,4 +1,3 @@
-import { HtmlSerializer } from './html-serializer'
 import { NodeTree } from './node-tree'
 
 export class RichTextParser {
@@ -6,10 +5,10 @@ export class RichTextParser {
    * Parse Prismic rich text components into HTML string.
    *
    * @param richText - Prismic rich text component
-   * @param {HtmlSerializer} [htmlSerializer=new HtmlSerializer()] - HtmlSerializer used for parsing
+   * @param htmlSerializer - HtmlSerializer used for parsing
    * @returns {string} Rich text as HTML string
    */
-  static parseAsHtml(richText, htmlSerializer = new HtmlSerializer()) {
+  static parseAsHtml(richText, htmlSerializer) {
     return htmlSerializer.serializeNodeTree(new NodeTree(richText)).join('')
   }
 

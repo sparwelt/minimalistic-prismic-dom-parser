@@ -1,6 +1,6 @@
 # minimalistic-prismic-dom-parser
 
-Minimalistic prismic dom parser as alternative to prismic-dom 
+Minimalistic prismic dom parser as alternative to prismic-dom
 with zero dependencies.
 
 ## Prerequisites
@@ -20,9 +20,13 @@ $ npm i -D @sparwelt/minimalistic-prismic-dom-parser
 ## Usage
 
 ### Parse as HTML
+
 ```javascript
 import { Prismic } from 'prismic-javascript'
-import { RichTextParser } from '@sparwelt/minimalistic-prismic-dom-parser'
+import {
+  HtmlSerializer,
+  RichTextParser
+} from '@sparwelt/minimalistic-prismic-dom-parser'
 
 const getHtml = async () => {
   try {
@@ -32,7 +36,10 @@ const getHtml = async () => {
       .then(api => api.query(''))
       .then(response => response.results)
 
-    return RichTextParser.parseAsHtml(documents[0].data.someRichTextElement)
+    return RichTextParser.parseAsHtml(
+      documents[0].data.someRichTextElement,
+      new HtmlSerializer()
+    )
   } catch (err) {
     return `Something went wrong: ${JSON.stringify(err)}`
   }
@@ -43,6 +50,7 @@ element.innerHTML = getHtml()
 ```
 
 ### Parse as Text
+
 ```javascript
 import { Prismic } from 'prismic-javascript'
 import { RichTextParser } from '@sparwelt/minimalistic-prismic-dom-parser'
@@ -64,3 +72,55 @@ const getText = async () => {
 const element = document.createElement('div')
 element.innerText = getText()
 ```
+
+## Customisation
+
+### HtmlSerializer
+
+Sometimes you might want to customise the HTML output of the rich text parser. This can be done by passing an options object to the htmlSerializer or even writing a complete custom serializer.
+
+We recommend you to use the HtmlSerializer from this package and pass it the options that suit your needs. You can find a list of all options below.
+
+```javascript
+import { HtmlSerializer } from '@sparwelt/minimalistic-prismic-dom-parser/src/html-serializer'
+
+const htmlSerializer = new HtmlSerializer({
+  imageCopyrightAttribute: 'title'
+})
+
+const html = RichTextParser.parseAsHtml(someRichText, htmlSerializer)
+```
+
+Alternatively, when providing your own serializer to the parser, it must at least have a function `serializeNodeTree` that returns an array of strings. It gets passed the parsed node tree as first parameter.
+
+The array of strings returned by `serializeNodeTree` will be concatenated by the parser and returned as string.
+
+```javascript
+class CustomHtmlSerializer {
+  serializeNodeTree(nodeTree) {
+    const step = node => {
+      const serializedChildren = node.children.reduce(
+        (result, node) => result.concat([step(node)]),
+        []
+      )
+
+      return `<p>${node.type}${serializedChildren.join('')}</p>`
+    }
+
+    return nodeTree.children.map(parentNode => {
+      return step(parentNode)
+    })
+  }
+}
+
+const html = RichTextParser.parseAsHtml(
+  someRichText,
+  new CustomHtmlSerializer()
+)
+```
+
+### HtmlSerializer Options
+
+| Option                  | Default Value  |
+| ----------------------- | -------------- |
+| imageCopyrightAttribute | data-copyright |

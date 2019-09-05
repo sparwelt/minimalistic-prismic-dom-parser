@@ -9,7 +9,7 @@
     "dom"
   ],
   "repository": "git@github.com:sparwelt/minimalistic-prismic-dom-parser.git",
-  "main": "src/rich-text-parser.js",
+  "main": "src/index.js",
   "files": [
     "src/**/*.js"
   ],

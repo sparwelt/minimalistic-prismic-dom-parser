@@ -1,4 +1,4 @@
-import { RichTextParser } from '../../src/rich-text-parser'
+import { HtmlSerializer, RichTextParser } from '../../src/index'
 import prismicMockData from '../mock-data/prismic'
 
 describe('RichTextParser', function() {
@@ -6,7 +6,7 @@ describe('RichTextParser', function() {
   const { parseAsHtml, parseAsText } = RichTextParser
 
   describe('parseAsHtml()', function() {
-    let parsedHtml = parseAsHtml(mock)
+    let parsedHtml = parseAsHtml(mock, new HtmlSerializer())
 
     it('should parse bold text correctly', function() {
       expect(parsedHtml).toContain('<p><strong>I am bold</strong></p>')
