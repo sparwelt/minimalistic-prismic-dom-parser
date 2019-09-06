@@ -100,7 +100,8 @@ const processTextBlock = textBlock => {
       const [elected, ...others] = group.sort((nodeA, nodeB) => {
         // Sort span nodes in a group by parenthood || priority || text length
         const priorityDiff =
-          PRISMIC_ELEMENTS[nodeA.type].priority - PRISMIC_ELEMENTS[nodeB.type].priority
+          PRISMIC_ELEMENTS[nodeA.type].priority -
+          PRISMIC_ELEMENTS[nodeB.type].priority
         const textLengthDiff = nodeA.text.length - nodeB.text.length
 
         return nodeA.isParentOf(nodeB)
@@ -221,13 +222,23 @@ const processTextBlock = textBlock => {
 export class NodeTree {
   constructor(richText) {
     this.richText = richText
+    this.children = this._createChildren()
   }
 
-  getChildren() {
+  /**
+   * Parse node trees rich text into an array of nodes
+   *
+   * @returns {*[]}
+   * @private
+   */
+  _createChildren() {
     return this.richText.reduce((children, currentBlock) => {
       const { type } = currentBlock
 
-      if (type === PRISMIC_ELEMENTS.embed.type || type === PRISMIC_ELEMENTS.image.type)
+      if (
+        type === PRISMIC_ELEMENTS.embed.type ||
+        type === PRISMIC_ELEMENTS.image.type
+      )
         return children.concat(new Node(type, currentBlock, []))
 
       const textNodes = processTextBlock(currentBlock)

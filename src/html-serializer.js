@@ -34,7 +34,7 @@ export class HtmlSerializer {
       return this.serialize(node, serializedChildren)
     }
 
-    return nodeTree.getChildren().map(parentNode => {
+    return nodeTree.children.map(parentNode => {
       return step(parentNode)
     })
   }
