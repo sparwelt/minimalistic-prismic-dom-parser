@@ -79,9 +79,9 @@ element.innerText = getText()
 
 ### HtmlSerializer
 
-Sometimes you might want to customise the HTML output of the rich text parser. This can be done by passing an options object to the htmlSerializer or even writing a complete custom serializer.
+Sometimes you might want to customise the HTML output of the rich text parser. This can be done by passing an options object to the htmlSerializer or providing a custom one.
 
-We recommend you to use the HtmlSerializer from this package and pass it the options that suit your needs. You can find a list of all options below.
+We recommend to use the HtmlSerializer from this package and pass it the options that suit your needs. You can find a list of all options below.
 
 ```javascript
 import { HtmlSerializer } from '@sparwelt/minimalistic-prismic-dom-parser/src/html-serializer'
@@ -93,7 +93,7 @@ const htmlSerializer = new HtmlSerializer({
 const html = RichTextParser.parseAsHtml(someRichText, htmlSerializer)
 ```
 
-Alternatively, when providing your own serializer to the parser, it must at least have a function `serializeNodeTree` that returns an array of strings. It gets passed the parsed node tree as first parameter.
+Alternatively, when providing your own serializer to the parser, it must at least have a function `serializeNodeTree` that returns an array of strings. It receives the parsed node tree as first parameter.
 
 The array of strings returned by `serializeNodeTree` will be concatenated by the parser and returned as string.
 
