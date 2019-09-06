@@ -1,4 +1,4 @@
-import { NODE_TYPES } from './types'
+import { PRISMIC_ELEMENTS } from './prismic-elements'
 
 export class Node {
   constructor(type, element, children) {
@@ -53,7 +53,7 @@ export class SpanNode extends Node {
 
 export class TextNode extends SpanNode {
   constructor(start, end, text) {
-    const { type } = NODE_TYPES.span
+    const { type } = PRISMIC_ELEMENTS.span
     const element = {
       type,
       start,
@@ -67,19 +67,19 @@ export class TextNode extends SpanNode {
 
 export class ListItemBlockNode extends Node {
   constructor(block, children = []) {
-    super(NODE_TYPES.listItem.type, block, children)
+    super(PRISMIC_ELEMENTS.listItem.type, block, children)
   }
 }
 
 export class OrderedListItemBlockNode extends Node {
   constructor(block, children = []) {
-    super(NODE_TYPES.oListItem.type, block, children)
+    super(PRISMIC_ELEMENTS.oListItem.type, block, children)
   }
 }
 
 export class ListBlockNode extends Node {
   constructor(block, children = []) {
-    super(NODE_TYPES.list.type, block, children)
+    super(PRISMIC_ELEMENTS.list.type, block, children)
   }
 
   addChild(node) {
@@ -89,7 +89,7 @@ export class ListBlockNode extends Node {
 
 export class OrderedListBlockNode extends Node {
   constructor(block, children = []) {
-    super(NODE_TYPES.oList.type, block, children)
+    super(PRISMIC_ELEMENTS.oList.type, block, children)
   }
 
   addChild(node) {

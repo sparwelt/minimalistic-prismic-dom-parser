@@ -121,6 +121,7 @@ const html = RichTextParser.parseAsHtml(
 
 ### HtmlSerializer Options
 
-| Option                  | Default Value  |
-| ----------------------- | -------------- |
-| imageCopyrightAttribute | data-copyright |
+| Option                  | Default  | Description                                                           |
+| ----------------------- | -------------- | --------------------------------------------------------------------- |
+|defaultHyperlinkTarget| _self | Value for hyperlink target attribute used as fallback if no link.target is provided by Prismic |
+| imageCopyrightAttribute | data-copyright | Attribute to assign the imageElement.copyright to |

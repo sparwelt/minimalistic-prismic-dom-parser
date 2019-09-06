@@ -1,4 +1,4 @@
-export const NODE_TYPES = {
+export const PRISMIC_ELEMENTS = {
   heading1: {
     type: 'heading1',
     priority: 4

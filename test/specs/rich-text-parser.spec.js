@@ -18,7 +18,7 @@ describe('RichTextParser', function() {
 
     it('should parse links correctly', function() {
       expect(parsedHtml).toContain(
-        '<p><a href="https:&#x2F;&#x2F;sparwelt.de">I am a link</a></p>'
+        '<p><a target="_self" rel="noopener" href="https:&#x2F;&#x2F;sparwelt.de">I am a link</a></p>'
       )
     })
 

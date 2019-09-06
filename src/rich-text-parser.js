@@ -9,7 +9,10 @@ export class RichTextParser {
    * @returns {string} Rich text as HTML string
    */
   static parseAsHtml(richText, htmlSerializer) {
-    return htmlSerializer.serializeNodeTree(new NodeTree(richText)).join('')
+    const nodeTree = new NodeTree(richText)
+    const serializedNodeTree = htmlSerializer.serializeNodeTree(nodeTree)
+
+    return serializedNodeTree.join('')
   }
 
   /**

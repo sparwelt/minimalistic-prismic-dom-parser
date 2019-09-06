@@ -8,9 +8,9 @@ import {
   OrderedListItemBlockNode,
   SpanNode,
   TextNode
-} from './utils/nodes'
+} from './types/nodes'
 import { replaceLast } from './utils/replace-last'
-import { NODE_TYPES } from './utils/types'
+import { PRISMIC_ELEMENTS } from './types/prismic-elements'
 
 /**
  * Creates an empty list.
@@ -19,7 +19,7 @@ import { NODE_TYPES } from './utils/types'
  * @returns {{spans: [], text: string, type: (*)}}
  */
 const createEmptyList = (ordered = false) => ({
-  type: ordered ? NODE_TYPES.oList.type : NODE_TYPES.list.type,
+  type: ordered ? PRISMIC_ELEMENTS.oList.type : PRISMIC_ELEMENTS.list.type,
   spans: [],
   text: ''
 })
@@ -100,7 +100,7 @@ const processTextBlock = textBlock => {
       const [elected, ...others] = group.sort((nodeA, nodeB) => {
         // Sort span nodes in a group by parenthood || priority || text length
         const priorityDiff =
-          NODE_TYPES[nodeA.type].priority - NODE_TYPES[nodeB.type].priority
+          PRISMIC_ELEMENTS[nodeA.type].priority - PRISMIC_ELEMENTS[nodeB.type].priority
         const textLengthDiff = nodeA.text.length - nodeB.text.length
 
         return nodeA.isParentOf(nodeB)
@@ -220,17 +220,21 @@ const processTextBlock = textBlock => {
  */
 export class NodeTree {
   constructor(richText) {
-    this.children = richText.reduce((children, currentBlock) => {
+    this.richText = richText
+  }
+
+  getChildren() {
+    return this.richText.reduce((children, currentBlock) => {
       const { type } = currentBlock
 
-      if (type === NODE_TYPES.embed.type || type === NODE_TYPES.image.type)
+      if (type === PRISMIC_ELEMENTS.embed.type || type === PRISMIC_ELEMENTS.image.type)
         return children.concat(new Node(type, currentBlock, []))
 
       const textNodes = processTextBlock(currentBlock)
 
       const previousBlock = getLast(children)
 
-      if (type === NODE_TYPES.listItem.type) {
+      if (type === PRISMIC_ELEMENTS.listItem.type) {
         const listItem = new ListItemBlockNode(currentBlock, textNodes)
 
         if (previousBlock && previousBlock instanceof ListBlockNode) {
@@ -242,7 +246,7 @@ export class NodeTree {
         return children.concat(list)
       }
 
-      if (type === NODE_TYPES.oListItem.type) {
+      if (type === PRISMIC_ELEMENTS.oListItem.type) {
         const orderedListItem = new OrderedListItemBlockNode(
           currentBlock,
           textNodes
