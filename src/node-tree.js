@@ -32,188 +32,183 @@ const createEmptyList = (ordered = false) => ({
  */
 const processTextBlock = textBlock => {
   const boundaries = { lower: 0, upper: textBlock.text.length }
-  const spanNodes = textBlock.spans.map(span => {
+  const spans = textBlock.spans.map(span => {
     const text = textBlock.text.slice(span.start, span.end)
     return new SpanNode(span.start, span.end, span.type, text, [], span)
   })
 
-  return buildTreeAndFill(textBlock.text, spanNodes, boundaries)
+  return buildTreeAndFill(textBlock.text, spans, boundaries)
+}
 
-  function buildTreeAndFill(text, spanNodes, boundaries) {
-    if (spanNodes.length) {
-      const tree = buildTree(text, spanNodes)
-      return fill(text, tree, boundaries)
-    }
-
-    const subtext = text.slice(boundaries.lower, boundaries.upper)
-    return [new TextNode(boundaries.lower, boundaries.upper, subtext)]
+const buildTreeAndFill = (text, spans, boundaries) => {
+  if (spans.length) {
+    const tree = buildTree(text, spans)
+    return fill(text, tree, boundaries)
   }
 
-  function buildTree(text, spanNodes) {
-    const sortedSpanNodes = spanNodes.sort(
-      (a, b) => a.start - b.start || a.end - b.end
+  const subtext = text.slice(boundaries.lower, boundaries.upper)
+  return [new TextNode(boundaries.lower, boundaries.upper, subtext)]
+}
+
+const buildTree = (text, spans) => {
+  const sortedSpans = spans.sort((a, b) => a.start - b.start || a.end - b.end)
+  const groupedSpans = groupSpans(sortedSpans)
+  const postElection = createElection(groupedSpans)
+  const partitionedGroups = partitionGroups(text, postElection)
+  const flattenedGroups = flatten(partitionedGroups)
+
+  return flattenedGroups.sort((nodeA, nodeB) => nodeA.start - nodeB.start)
+}
+
+/**
+ * Group spans that style the same text.
+ *
+ * @param {SpanNode[]} spans
+ * @returns {SpanNode[][]}
+ */
+const groupSpans = spans => {
+  if (!spans.length) return []
+
+  let current = spans[0]
+  let currentGroup = [current]
+  const groupedSpans = [currentGroup]
+
+  for (let i = 1; i < spans.length; i++) {
+    const previous = current
+    current = spans[i]
+
+    currentGroup.some(span => span.isParentOf(current)) ||
+    previous.end >= current.start
+      ? currentGroup.push(current)
+      : groupedSpans.push((currentGroup = [current]))
+  }
+
+  return groupedSpans
+}
+
+/**
+ * Elect the span node with the highest priority per group.
+ *
+ * @param {SpanNode[][]} groups
+ * @returns {{elected: SpanNode, others: SpanNode[]}[]}
+ */
+const createElection = groups => {
+  return groups.map(group => {
+    if (!group.length) throw new Error('Unable to elect node on empty list')
+
+    const [elected, ...others] = group.sort((spanA, spanB) => {
+      // Sort spans in a group by parenthood || priority || text length
+      const priorityDiff =
+        PRISMIC_ELEMENTS[spanA.type].priority -
+        PRISMIC_ELEMENTS[spanB.type].priority
+      const textLengthDiff = spanA.text.length - spanB.text.length
+
+      return spanA.isParentOf(spanB)
+        ? -1
+        : spanB.isParentOf(spanA)
+        ? 1
+        : priorityDiff || textLengthDiff
+    })
+
+    return { elected, others }
+  })
+}
+
+/**
+ * Partition not elected spans into slices inside or outside of the elected span.
+ *
+ *
+ * @param {string} text
+ * @param {{elected: SpanNode, others: SpanNode[]}[]} groups
+ */
+const partitionGroups = (text, groups) => {
+  return groups.map(group => {
+    const { innerSpans, outerSpans } = group.others.reduce(
+      ({ innerSpans, outerSpans }, span) => {
+        const { inner, outer } = sliceSpan(text, span, group.elected)
+
+        return {
+          innerSpans: innerSpans.concat(inner),
+          outerSpans: outer ? outerSpans.concat(outer) : outerSpans
+        }
+      },
+      { innerSpans: [], outerSpans: [] }
     )
-    const groupedSpanNodes = groupSpanNodes(sortedSpanNodes)
-    const postElection = createElection(groupedSpanNodes)
-    const partitionedGroups = partitionGroups(text, postElection)
-    const flattenedGroups = flatten(partitionedGroups)
 
-    return flattenedGroups.sort((nodeA, nodeB) => nodeA.start - nodeB.start)
-  }
+    const head = group.elected.setChildren(
+      // recursion
+      buildTreeAndFill(text, innerSpans, group.elected.boundaries())
+    )
 
-  /**
-   * Group together span nodes that style the same part of the text.
-   *
-   * @param {SpanNode[]} spanNodes
-   * @returns {SpanNode[][]}
-   */
-  function groupSpanNodes(spanNodes) {
-    if (!spanNodes.length) return []
+    return [head].concat(buildTree(text, outerSpans))
+  })
+}
 
-    let currentNode = spanNodes[0]
-    let currentGroup = [currentNode]
-    const groupedTextNodes = [currentGroup]
+/**
+ * Slice span into parts inside and outside of the elected span.
+ *
+ * @param {string} text
+ * @param {SpanNode} span
+ * @param {SpanNode} elected
+ * @returns {{outer: SpanNode| undefined, inner: SpanNode}}
+ */
+const sliceSpan = (text, span, elected) => {
+  return span.start < elected.start
+    ? {
+        inner: SpanNode.slice(span, elected.start, span.end, text),
+        outer: SpanNode.slice(span, span.start, elected.start, text)
+      }
+    : span.end > elected.end
+    ? {
+        inner: SpanNode.slice(span, span.start, elected.end, text),
+        outer: SpanNode.slice(span, elected.end, span.end, text)
+      }
+    : { inner: span }
+}
 
-    for (let i = 1; i < spanNodes.length; i++) {
-      const previousNode = currentNode
-      currentNode = spanNodes[i]
+/**
+ * Fill an array with the spans of a given tree.
+ * Adds text outside of the given boundaries as text nodes.
+ *
+ * @param {string} text
+ * @param {SpanNode[]} tree
+ * @param {{lower: number, upper: number}} boundaries
+ * @returns {(TextNode|SpanNode)[]}
+ */
+const fill = (text, tree, boundaries) => {
+  return tree.reduce((result, span, index) => {
+    const previousNode = tree[index - 1]
+    const fillStart = 0 === index && span.start > boundaries.lower
+    const fillEnd = tree.length - 1 === index && boundaries.upper > span.end
 
-      currentGroup.some(node => node.isParentOf(currentNode)) ||
-      previousNode.end >= currentNode.start
-        ? currentGroup.push(currentNode)
-        : groupedTextNodes.push((currentGroup = [currentNode]))
+    const sliceStart = fillStart
+      ? boundaries.lower
+      : previousNode
+      ? previousNode.end
+      : null
+
+    if (null !== sliceStart) {
+      const textNode = new TextNode(
+        sliceStart,
+        span.start,
+        text.slice(sliceStart, span.start)
+      )
+      result.push(textNode)
     }
 
-    return groupedTextNodes
-  }
+    result.push(span)
 
-  /**
-   * Elect the span node with the highest priority per group.
-   *
-   * @param {SpanNode[][]} groups
-   * @returns {{elected: SpanNode, others: SpanNode[]}[]}
-   */
-  function createElection(groups) {
-    return groups.map(group => {
-      if (!group.length) throw new Error('Unable to elect node on empty list')
-
-      const [elected, ...others] = group.sort((nodeA, nodeB) => {
-        // Sort span nodes in a group by parenthood || priority || text length
-        const priorityDiff =
-          PRISMIC_ELEMENTS[nodeA.type].priority -
-          PRISMIC_ELEMENTS[nodeB.type].priority
-        const textLengthDiff = nodeA.text.length - nodeB.text.length
-
-        return nodeA.isParentOf(nodeB)
-          ? -1
-          : nodeB.isParentOf(nodeA)
-          ? 1
-          : priorityDiff || textLengthDiff
-      })
-
-      return { elected, others }
-    })
-  }
-
-  /**
-   * Partition nodes not elected into slices inside the elected span node and
-   * slices outside the elected span node
-   *
-   * @param {string} text
-   * @param {{elected: SpanNode, others: SpanNode[]}[]} groups
-   */
-  function partitionGroups(text, groups) {
-    return groups.map(group => {
-      const { innerNodes, outerNodes } = group.others.reduce(
-        ({ innerNodes, outerNodes }, spanNode) => {
-          const { inner, outer } = sliceNode(text, spanNode, group.elected)
-
-          return {
-            innerNodes: innerNodes.concat(inner),
-            outerNodes: outer ? outerNodes.concat(outer) : outerNodes
-          }
-        },
-        { innerNodes: [], outerNodes: [] }
+    if (fillEnd) {
+      const textNode = new TextNode(
+        span.end,
+        boundaries.upper,
+        text.slice(span.end, boundaries.upper)
       )
+      result.push(textNode)
+    }
 
-      const head = group.elected.setChildren(
-        // recursion
-        buildTreeAndFill(text, innerNodes, group.elected.boundaries())
-      )
-
-      return [head].concat(buildTree(text, outerNodes))
-    })
-  }
-
-  /**
-   * Slice span node into inner and outer part, if it exceeds the elected span node.
-   * If the span node is inherited completely by the elected,
-   * the whole node is returned as inner slice.
-   *
-   * @param {string} text
-   * @param {SpanNode} spanNode
-   * @param {SpanNode} elected
-   * @returns {{outer: SpanNode| undefined, inner: SpanNode}}
-   */
-  function sliceNode(text, spanNode, elected) {
-    return spanNode.start < elected.start
-      ? {
-          inner: SpanNode.slice(spanNode, elected.start, spanNode.end, text),
-          outer: SpanNode.slice(spanNode, spanNode.start, elected.start, text)
-        }
-      : spanNode.end > elected.end
-      ? {
-          inner: SpanNode.slice(spanNode, spanNode.start, elected.end, text),
-          outer: SpanNode.slice(spanNode, elected.end, spanNode.end, text)
-        }
-      : { inner: spanNode }
-  }
-
-  /**
-   * Fill an array with the span nodes of a given tree.
-   * Adds text outside of the given boundaries as text nodes.
-   *
-   * @param {string} text
-   * @param {SpanNode[]} tree
-   * @param {{lower: number, upper: number}} boundaries
-   * @returns {(TextNode|SpanNode)[]}
-   */
-  function fill(text, tree, boundaries) {
-    return tree.reduce((result, spanNode, index) => {
-      const previousNode = tree[index - 1]
-      const fillStart = 0 === index && spanNode.start > boundaries.lower
-      const fillEnd =
-        tree.length - 1 === index && boundaries.upper > spanNode.end
-
-      const sliceStart = fillStart
-        ? boundaries.lower
-        : previousNode
-        ? previousNode.end
-        : null
-
-      if (null !== sliceStart) {
-        const textNode = new TextNode(
-          sliceStart,
-          spanNode.start,
-          text.slice(sliceStart, spanNode.start)
-        )
-        result.push(textNode)
-      }
-
-      result.push(spanNode)
-
-      if (fillEnd) {
-        const textNode = new TextNode(
-          spanNode.end,
-          boundaries.upper,
-          text.slice(spanNode.end, boundaries.upper)
-        )
-        result.push(textNode)
-      }
-
-      return result
-    }, [])
-  }
+    return result
+  }, [])
 }
 
 /**
