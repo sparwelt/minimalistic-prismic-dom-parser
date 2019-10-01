@@ -1,6 +1,6 @@
 {
   "name": "@sparwelt/minimalistic-prismic-dom-parser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Minimalistic Prismic DOM parser as an alternative to prismic-dom.",
   "author": "Sparwelt",
   "license": "MIT",
